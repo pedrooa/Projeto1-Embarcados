@@ -47,7 +47,7 @@ void SysTick_Handler() {
 	g_systimer++;
 }
 
-
+//configurando a comunicação
 void config_console(void) {
 	usart_serial_options_t config;
 	config.baudrate = 9600;
@@ -59,10 +59,12 @@ void config_console(void) {
 	usart_enable_rx(USART1);
 }
 
+//funcao que p
 void usart_put_string(Usart *usart, char str[]) {
 	usart_serial_write_packet(usart, str, strlen(str));
 }
 
+//funcao que preenche o buffer de entrada
 int usart_get_string(Usart *usart, char buffer[], int bufferlen, int timeout_ms) {
 	long timestart = g_systimer;
 	uint32_t rx;
@@ -74,6 +76,7 @@ int usart_get_string(Usart *usart, char buffer[], int bufferlen, int timeout_ms)
 			buffer[counter++] = rx;
 		}
 	}
+	//para saber quando o buffer acabou, o código coloca 0x00 como último valor do buffer
 	buffer[counter] = 0x00;
 	return counter;
 }
@@ -143,7 +146,7 @@ int main (void)
 		} else {
 			button1 = '0';
 		}
-		
+		//esse while existe pois a velocidade do microprocessador é muito mais rapida do que a do bt. Ele existe para fazer o código esperar o buffer do bt estar pronto.
 		while(!usart_is_tx_ready(UART_COMM));
 		usart_write(UART_COMM, button1);
 		while(!usart_is_tx_ready(UART_COMM));
