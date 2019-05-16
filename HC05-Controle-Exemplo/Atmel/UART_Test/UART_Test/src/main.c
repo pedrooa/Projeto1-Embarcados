@@ -188,19 +188,19 @@ void init(void)
 
   // Configura PIO para lidar com o pino do botão como entrada
   // com pull-up
-	pio_configure(BUTA_PIO, PIO_INPUT, BUTA_IDX_MASK, PIO_PULLUP);
+	pio_configure(BUTA_PIO, PIO_INPUT, BUTA_PIO_IDX_MASK, PIO_PULLUP);
 
   // Configura interrupção no pino referente ao botao e associa
   // função de callback caso uma interrupção for gerada
   // a função de callback é a: but_callback()
   pio_handler_set(BUTA_PIO,
                   BUTA_PIO_ID,
-                  BUTA_IDX_MASK,
+                  BUTA_PIO_IDX_MASK,
                   PIO_IT_FALL_EDGE,
                   butA_callback);
 
   // Ativa interrupção
-  pio_enable_interrupt(BUTA_PIO, BUTA_IDX_MASK);
+  pio_enable_interrupt(BUTA_PIO, BUTA_PIO_IDX_MASK);
 
   // Configura NVIC para receber interrupcoes do PIO do botao
   // com prioridade 4 (quanto mais próximo de 0 maior)
@@ -214,19 +214,19 @@ void init(void)
 
   // Configura PIO para lidar com o pino do botão como entrada
   // com pull-up
-	pio_configure(BUTB_PIO, PIO_INPUT, BUTB_IDX_MASK, PIO_PULLUP);
+	pio_configure(BUTB_PIO, PIO_INPUT, BUTB_PIO_IDX_MASK, PIO_PULLUP);
 
   // Configura interrupção no pino referente ao botao e associa
   // função de callback caso uma interrupção for gerada
   // a função de callback é a: but_callback()
   pio_handler_set(BUTB_PIO,
                   BUTB_PIO_ID,
-                  BUTB_IDX_MASK,
+                  BUTB_PIO_IDX_MASK,
                   PIO_IT_FALL_EDGE,
                   butB_callback);
 
   // Ativa interrupção
-  pio_enable_interrupt(BUTB_PIO, BUTB_IDX_MASK);
+  pio_enable_interrupt(BUTB_PIO, BUTB_PIO_IDX_MASK);
 
   // Configura NVIC para receber interrupcoes do PIO do botao
   // com prioridade 4 (quanto mais próximo de 0 maior)
@@ -240,19 +240,19 @@ void init(void)
 
   // Configura PIO para lidar com o pino do botão como entrada
   // com pull-up
-	pio_configure(BUTSELECT_PIO, PIO_INPUT, BUTSELECT_IDX_MASK, PIO_PULLUP);
+	pio_configure(BUTSELECT_PIO, PIO_INPUT, BUTSELECT_PIO_IDX_MASK, PIO_PULLUP);
 
   // Configura interrupção no pino referente ao botao e associa
   // função de callback caso uma interrupção for gerada
   // a função de callback é a: but_callback()
   pio_handler_set(BUTSELECT_PIO,
                   BUTSELECT_PIO_ID,
-                  BUTSELECT_IDX_MASK,
+                  BUTSELECT_PIO_IDX_MASK,
                   PIO_IT_FALL_EDGE,
                   butSelect_callback);
 
   // Ativa interrupção
-  pio_enable_interrupt(BUTSELECT_PIO, BUTSELECT_IDX_MASK);
+  pio_enable_interrupt(BUTSELECT_PIO, BUTSELECT_PIO_IDX_MASK);
 
   // Configura NVIC para receber interrupcoes do PIO do botao
   // com prioridade 4 (quanto mais próximo de 0 maior)
@@ -266,19 +266,19 @@ void init(void)
 
   // Configura PIO para lidar com o pino do botão como entrada
   // com pull-up
-	pio_configure(BUTSTART_PIO, PIO_INPUT, BUTSTART_IDX_MASK, PIO_PULLUP);
+	pio_configure(BUTSTART_PIO, PIO_INPUT, BUTSTART_PIO_IDX_MASK, PIO_PULLUP);
 
   // Configura interrupção no pino referente ao botao e associa
   // função de callback caso uma interrupção for gerada
   // a função de callback é a: but_callback()
   pio_handler_set(BUTSTART_PIO,
                   BUTSTART_PIO_ID,
-                  BUTSTART_IDX_MASK,
+                  BUTSTART_PIO_IDX_MASK,
                   PIO_IT_FALL_EDGE,
                   butStart_callback);
 
   // Ativa interrupção
-  pio_enable_interrupt(BUTSTART_PIO, BUTSTART_IDX_MASK);
+  pio_enable_interrupt(BUTSTART_PIO, BUTSTART_PIO_IDX_MASK);
 
   // Configura NVIC para receber interrupcoes do PIO do botao
   // com prioridade 4 (quanto mais próximo de 0 maior)
