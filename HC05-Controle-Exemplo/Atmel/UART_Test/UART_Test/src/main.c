@@ -41,6 +41,16 @@
 #define UART_COMM USART0
 #endif
 
+
+#define AFEC_CHANNEL_RES_PIN 0
+
+/** Reference voltage for AFEC,in mv. */
+#define VOLT_REF        (3300)
+
+/** The maximal digital value */
+/** 2^12 - 1                  */
+#define MAX_DIGITAL     (4095)
+
 //Configs button A
 #define BUTA_PIO           PIOD
 #define BUTA_PIO_ID        ID_PIOD
@@ -65,6 +75,17 @@
 #define BUTSTART_PIO_IDX       2u
 #define BUTSTART_PIO_IDX_MASK  (1u << BUTSTART_PIO_IDX)
 
+/** UART Interface */
+#define CONF_UART            CONSOLE_UART
+/** Baudrate setting */
+#define CONF_UART_BAUDRATE   (115200UL)
+/** Character length setting */
+#define CONF_UART_CHAR_LENGTH  US_MR_CHRL_8_BIT
+/** Parity setting */
+#define CONF_UART_PARITY     US_MR_PAR_NO
+/** Stop bits setting */
+#define CONF_UART_STOP_BITS    US_MR_NBSTOP_1_BIT
+
 
 
 /************************************************************************/
@@ -76,6 +97,13 @@ volatile bool butSelect_flag = false;
 volatile bool butStart_flag = false;
 
 volatile long g_systimer = 0;
+
+/** The conversion data is done flag */
+volatile bool g_is_conversion_done = false;
+volatile bool g_is_res_done = false;
+volatile bool g_delay = false;
+volatile uint32_t g_res_value = 0;
+
 
 
 void butA_callback(void)
@@ -98,22 +126,157 @@ void butStart_callback(void)
   butStart_flag = true;
 }
 
+static void AFEC_Res_callback(void)
+{
+	g_res_value = afec_channel_get_value(AFEC0, AFEC_CHANNEL_RES_PIN);
+	g_is_res_done = true;
+}
+
 
 void SysTick_Handler() {
 	g_systimer++;
 }
 
-//configurando a comunica��o
-void config_console(void) {
-	usart_serial_options_t config;
-	config.baudrate = 9600;
-	config.charlength = US_MR_CHRL_8_BIT;
-	config.paritytype = US_MR_PAR_NO;
-	config.stopbits = false;
-	usart_serial_init(USART1, &config);
-	usart_enable_tx(USART1);
-	usart_enable_rx(USART1);
+static void configure_console(void)
+{
+	const usart_serial_options_t uart_serial_options = {
+		.baudrate   = CONF_UART_BAUDRATE,
+		.charlength = CONF_UART_CHAR_LENGTH,
+		.paritytype = CONF_UART_PARITY,
+		.stopbits   = CONF_UART_STOP_BITS,
+	};
+
+	/* Configure console UART. */
+	sysclk_enable_peripheral_clock(CONSOLE_UART_ID);
+	stdio_serial_init(CONF_UART, &uart_serial_options);
 }
+
+void TC0_Handler(void){
+	volatile uint32_t ul_dummy;
+
+	/****************************************************************
+	* Devemos indicar ao TC que a interrup??o foi satisfeita.
+	******************************************************************/
+	ul_dummy = tc_get_status(TC0, 0);
+
+	/* Avoid compiler warning */
+	UNUSED(ul_dummy);
+
+	//afec_channel_enable(AFEC0, AFEC_CHANNEL_RES_PIN);
+	//afec_start_software_conversion(AFEC0);
+	
+}
+
+
+void TC1_Handler(void){
+	volatile uint32_t ul_dummy;
+
+	/****************************************************************
+	* Devemos indicar ao TC que a interrup??o foi satisfeita.
+	******************************************************************/
+	ul_dummy = tc_get_status(TC0, 1);
+
+	/* Avoid compiler warning */
+	UNUSED(ul_dummy);
+
+	afec_channel_enable(AFEC0, AFEC_CHANNEL_RES_PIN);
+	afec_start_software_conversion(AFEC0);
+	
+}
+
+
+static int32_t convert_adc_to_res(int32_t ADC_value){
+
+  int32_t ul_vol;
+  int32_t ul_res;
+
+  /*
+   * converte bits -> tens�o (Volts)
+   */
+	ul_vol = ADC_value * VOLT_REF / (float) MAX_DIGITAL;
+
+  /*
+   * According to datasheet, The output voltage VT = 0.72V at 27C
+   * and the temperature slope dVT/dT = 2.33 mV/C
+   */
+  ul_res = (ul_vol - 720)  * 100 / 233 + 27; //MUDAR
+  return(ul_res);
+}
+
+void TC_init(Tc * TC, int ID_TC, int TC_CHANNEL, int freq){
+	uint32_t ul_div;
+	uint32_t ul_tcclks;
+	uint32_t ul_sysclk = sysclk_get_cpu_hz();
+
+	uint32_t channel = 1;
+
+	/* Configura o PMC */
+	/* O TimerCounter ? meio confuso
+	o uC possui 3 TCs, cada TC possui 3 canais
+	TC0 : ID_TC0, ID_TC1, ID_TC2
+	TC1 : ID_TC3, ID_TC4, ID_TC5
+	TC2 : ID_TC6, ID_TC7, ID_TC8
+	*/
+	pmc_enable_periph_clk(ID_TC);
+
+	/** Configura o TC para operar em  4Mhz e interrup?c?o no RC compare */
+	tc_find_mck_divisor(freq, ul_sysclk, &ul_div, &ul_tcclks, ul_sysclk);
+	tc_init(TC, TC_CHANNEL, ul_tcclks | TC_CMR_CPCTRG);
+	tc_write_rc(TC, TC_CHANNEL, ((ul_sysclk) / ul_div) / freq);
+
+	/* Configura e ativa interrup?c?o no TC canal 0 */
+	/* Interrup??o no C */
+	NVIC_EnableIRQ((IRQn_Type) ID_TC);
+	tc_enable_interrupt(TC, TC_CHANNEL, TC_IER_CPCS);
+
+	/* Inicializa o canal 0 do TC */
+	tc_start(TC, TC_CHANNEL);
+}
+
+static void config_ADC_TEMP_RES(void){
+/*************************************
+   * Ativa e configura AFEC
+   *************************************/
+  /* Ativa AFEC - 0 */
+	afec_enable(AFEC0);
+
+	/* struct de configuracao do AFEC */
+	struct afec_config afec_cfg;
+
+	/* Carrega parametros padrao */
+	afec_get_config_defaults(&afec_cfg);
+
+	/* Configura AFEC */
+	afec_init(AFEC0, &afec_cfg);
+
+	/* Configura trigger por software */
+	afec_set_trigger(AFEC0, AFEC_TRIG_SW);
+
+	/* configura call back */
+	afec_set_callback(AFEC0, AFEC_INTERRUPT_EOC_0,	AFEC_Res_callback, 1);
+
+	/*** Configuracao espec�fica do canal AFEC ***/
+	struct afec_ch_config afec_ch_cfg;
+	afec_ch_get_config_defaults(&afec_ch_cfg);
+	afec_ch_cfg.gain = AFEC_GAINVALUE_0;
+
+	/*
+	* Calibracao:
+	* Because the internal ADC offset is 0x200, it should cancel it and shift
+	 down to 0.
+	 */
+	afec_channel_set_analog_offset(AFEC0, AFEC_CHANNEL_RES_PIN, 0x200);
+
+	/***  Configura sensor de temperatura ***/
+	struct afec_temp_sensor_config afec_temp_sensor_cfg;
+
+	afec_temp_sensor_get_config_defaults(&afec_temp_sensor_cfg);
+	afec_temp_sensor_set_config(AFEC0, &afec_temp_sensor_cfg);
+
+	/* Selecina canal e inicializa convers�o */
+	afec_channel_enable(AFEC0, AFEC_CHANNEL_RES_PIN);
+}
+
 
 //funcao que p
 void usart_put_string(Usart *usart, char str[]) {
@@ -169,7 +332,7 @@ int hc05_server_init(void) {
 	char buffer_rx[128];
 	usart_send_command(USART0, buffer_rx, 1000, "AT", 1000);
 	usart_send_command(USART0, buffer_rx, 1000, "AT", 1000);	
-	usart_send_command(USART0, buffer_rx, 1000, "AT+NAMEServer", 1000);
+	usart_send_command(USART0, buffer_rx, 1000, "AT+NAMEPedroServ", 1000);
 	usart_log("hc05_server_init", buffer_rx);
 	usart_send_command(USART0, buffer_rx, 1000, "AT", 1000);
 	usart_send_command(USART0, buffer_rx, 1000, "AT+PIN0000", 1000);
@@ -294,8 +457,13 @@ int main (void)
 	sysclk_init();
 	delay_init();
 	SysTick_Config(sysclk_get_cpu_hz() / 1000); // 1 ms
-	config_console();
+	config_ADC_TEMP_RES();
+	configure_console();
 	init();
+	
+	TC_init(TC0, ID_TC1, 1, 1);
+	TC_init(TC0, ID_TC0, 0, 10);
+		
 	
 	#ifndef DEBUG_SERIAL
 	usart_put_string(USART1, "Inicializando...\r\n");
@@ -307,7 +475,7 @@ int main (void)
 	char button1 = '0';
 	char eof = 'X';
 	char buffer[1024];
-	
+
 	while(1) {
 		if(butA_flag) {
 			button1 = '1';
@@ -315,10 +483,17 @@ int main (void)
 		} else {
 			button1 = '0';
 		}
+		if(g_is_res_done==true){
+			printf("done \n");
+
+			g_is_res_done = false;
+		}
+				
 		//esse while existe pois a velocidade do microprocessador � muito mais rapida do que a do bt. Ele existe para fazer o c�digo esperar o buffer do bt estar pronto.
 		while(!usart_is_tx_ready(UART_COMM));
 		usart_write(UART_COMM, button1);
 		while(!usart_is_tx_ready(UART_COMM));
 		usart_write(UART_COMM, eof);
+		delay_ms(300);
 	}
 }
