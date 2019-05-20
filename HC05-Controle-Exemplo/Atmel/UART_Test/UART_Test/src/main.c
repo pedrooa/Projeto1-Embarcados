@@ -76,6 +76,12 @@
 #define BUTSTART_PIO_IDX       2u
 #define BUTSTART_PIO_IDX_MASK  (1u << BUTSTART_PIO_IDX)
 
+#define LEDA_PIO  PIOB
+#define LEDA_PIO_ID ID_PIOB
+#define LEDA_PIO_IDX 2u
+#define LEDA_PIO_IDX_MASK (1u << LEDA_PIO_IDX)
+
+
 /** UART Interface */
 #define CONF_UART            CONSOLE_UART
 /** Baudrate setting */
@@ -380,6 +386,12 @@ int hc05_server_init(void) {
 	usart_log("hc05_server_init", buffer_rx);
 }
 
+void pisca_led(LED_PIO, LED_IDX_MASK){
+	pio_set(LED_PIO, LED_IDX_MASK);
+	delay_ms(100);
+	pio_clear(LED_PIO, LED_IDX_MASK);
+}
+
 // Fun��o de inicializa��o do uC
 void init(void)
 {
@@ -488,6 +500,11 @@ void init(void)
   // com prioridade 4 (quanto mais próximo de 0 maior)
   NVIC_EnableIRQ(BUTSTART_PIO_ID);
   NVIC_SetPriority(BUTSTART_PIO_ID, 4); // Prioridade 4
+  
+  //configs LED
+  
+  pmc_enable_periph_clk(LEDA_PIO_ID);
+  pio_configure(LEDA_PIO, PIO_OUTPUT_0, LEDA_PIO_IDX_MASK, PIO_DEFAULT);
 	
 }
 
@@ -521,6 +538,7 @@ int main (void)
 	while(1) {
 		if(butA_flag) {
 			button1 = '1';
+			pisca_led(LEDA_PIO, LEDA_PIO_IDX_MASK);
 			butA_flag = false;
 		} else {
 			button1 = '0';
