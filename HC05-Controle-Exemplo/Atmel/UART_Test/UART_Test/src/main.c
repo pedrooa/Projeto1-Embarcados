@@ -301,9 +301,9 @@ static void config_ADC_TEMP_RES(void){
 
 void set_analog_result_x(uint32_t input) {
 	if (input > 3500) {
-		analog_x = '2';//e
-	} else if (input < 1100) {
 		analog_x = '3';//d
+	} else if (input < 1100) {
+		analog_x = '2';//e
 	} else {
 		analog_x = '0';
 	}
@@ -311,9 +311,9 @@ void set_analog_result_x(uint32_t input) {
 
 void set_analog_result_y(uint32_t input) {
 	if (input > 3400) {
-		analog_y = '4';//c
+		analog_y = '4';//b
 	} else if (input < 1100) {
-		analog_y = '5';//b
+		analog_y = '5';//c
 	} else {
 		analog_y = '0';
 	}
@@ -373,10 +373,10 @@ int hc05_server_init(void) {
 	char buffer_rx[128];
 	usart_send_command(USART0, buffer_rx, 1000, "AT", 1000);
 	usart_send_command(USART0, buffer_rx, 1000, "AT", 1000);	
-	usart_send_command(USART0, buffer_rx, 1000, "AT+NAMEPedroServ", 1000);
+	usart_send_command(USART0, buffer_rx, 1000, "AT+NAMEPedro", 1000);
 	usart_log("hc05_server_init", buffer_rx);
 	usart_send_command(USART0, buffer_rx, 1000, "AT", 1000);
-	usart_send_command(USART0, buffer_rx, 1000, "AT+PIN0000", 1000);
+	usart_send_command(USART0, buffer_rx, 1000, "AT+PIN5555", 1000);
 	usart_log("hc05_server_init", buffer_rx);
 }
 
@@ -546,7 +546,7 @@ int main (void)
 		usart_write(UART_COMM, analog_y);
 		while(!usart_is_tx_ready(UART_COMM));
 		usart_write(UART_COMM, eof);
-		delay_ms(300);
+		//delay_ms(300);
 	}
 }
 	
