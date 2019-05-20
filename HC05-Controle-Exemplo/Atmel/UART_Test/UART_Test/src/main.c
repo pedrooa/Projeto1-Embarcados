@@ -76,6 +76,12 @@
 #define BUTSTART_PIO_IDX       2u
 #define BUTSTART_PIO_IDX_MASK  (1u << BUTSTART_PIO_IDX)
 
+#define LEDA_PIO  PIOB
+#define LEDA_PIO_ID ID_PIOB
+#define LEDA_PIO_IDX 2u
+#define LEDA_PIO_IDX_MASK (1u << LEDA_PIO_IDX)
+
+
 /** UART Interface */
 #define CONF_UART            CONSOLE_UART
 /** Baudrate setting */
@@ -380,6 +386,12 @@ int hc05_server_init(void) {
 	usart_log("hc05_server_init", buffer_rx);
 }
 
+void pisca_led(LED_PIO, LED_IDX_MASK){
+	pio_set(LED_PIO, LED_IDX_MASK);
+	delay_ms(100);
+	pio_clear(LED_PIO, LED_IDX_MASK);
+}
+
 // Fun��o de inicializa��o do uC
 void init(void)
 {
@@ -488,6 +500,11 @@ void init(void)
   // com prioridade 4 (quanto mais próximo de 0 maior)
   NVIC_EnableIRQ(BUTSTART_PIO_ID);
   NVIC_SetPriority(BUTSTART_PIO_ID, 4); // Prioridade 4
+  
+  //configs LED
+  
+  pmc_enable_periph_clk(LEDA_PIO_ID);
+  pio_configure(LEDA_PIO, PIO_OUTPUT_0, LEDA_PIO_IDX_MASK, PIO_DEFAULT);
 	
 }
 
@@ -514,6 +531,9 @@ int main (void)
 	#endif
 	
 	char button1 = '0';
+	char buttonB = '0';
+	char buttonSelect = '0';
+	char buttonStart = '0';
 	char eof = 'X';
 	char buffer[1024];
 	
@@ -521,9 +541,33 @@ int main (void)
 	while(1) {
 		if(butA_flag) {
 			button1 = '1';
+			pisca_led(LEDA_PIO, LEDA_PIO_IDX_MASK);
 			butA_flag = false;
 		} else {
 			button1 = '0';
+			
+		if(butB_flag){
+			buttonB = '1';
+			butB_flag = false;
+		}
+		else{
+			buttonB = '0';
+		}
+		if(butSelect_flag){
+			buttonSelect = '1';
+			butSelect_flag = false;
+		}
+		else{
+			buttonSelect = '0';
+		}
+		if(butStart_flag){
+			buttonStart = '1';
+			butStart_flag = false;
+		}
+		else {
+			buttonStart = '0';
+		}
+		
 		}
 		if(g_is_res_done==true){
 			set_analog_result_x(g_res_value);
@@ -540,6 +584,12 @@ int main (void)
 		//esse while existe pois a velocidade do microprocessador � muito mais rapida do que a do bt. Ele existe para fazer o c�digo esperar o buffer do bt estar pronto.
 		while(!usart_is_tx_ready(UART_COMM));
 		usart_write(UART_COMM, button1);
+		while(!usart_is_tx_ready(UART_COMM));
+		usart_write(UART_COMM, buttonB);
+		while(!usart_is_tx_ready(UART_COMM));
+		usart_write(UART_COMM, buttonSelect);
+		while(!usart_is_tx_ready(UART_COMM));
+		usart_write(UART_COMM, buttonStart);
 		while(!usart_is_tx_ready(UART_COMM));
 		usart_write(UART_COMM, analog_x);
 		while(!usart_is_tx_ready(UART_COMM));
