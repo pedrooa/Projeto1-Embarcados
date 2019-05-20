@@ -531,6 +531,9 @@ int main (void)
 	#endif
 	
 	char button1 = '0';
+	char buttonB = '0';
+	char buttonSelect = '0';
+	char buttonStart = '0';
 	char eof = 'X';
 	char buffer[1024];
 	
@@ -542,6 +545,29 @@ int main (void)
 			butA_flag = false;
 		} else {
 			button1 = '0';
+			
+		if(butB_flag){
+			buttonB = '1';
+			butB_flag = false;
+		}
+		else{
+			buttonB = '0';
+		}
+		if(butSelect_flag){
+			buttonSelect = '1';
+			butSelect_flag = false;
+		}
+		else{
+			buttonSelect = '0';
+		}
+		if(butStart_flag){
+			buttonStart = '1';
+			butStart_flag = false;
+		}
+		else {
+			buttonStart = '0';
+		}
+		
 		}
 		if(g_is_res_done==true){
 			set_analog_result_x(g_res_value);
@@ -558,6 +584,12 @@ int main (void)
 		//esse while existe pois a velocidade do microprocessador � muito mais rapida do que a do bt. Ele existe para fazer o c�digo esperar o buffer do bt estar pronto.
 		while(!usart_is_tx_ready(UART_COMM));
 		usart_write(UART_COMM, button1);
+		while(!usart_is_tx_ready(UART_COMM));
+		usart_write(UART_COMM, buttonB);
+		while(!usart_is_tx_ready(UART_COMM));
+		usart_write(UART_COMM, buttonSelect);
+		while(!usart_is_tx_ready(UART_COMM));
+		usart_write(UART_COMM, buttonStart);
 		while(!usart_is_tx_ready(UART_COMM));
 		usart_write(UART_COMM, analog_x);
 		while(!usart_is_tx_ready(UART_COMM));
