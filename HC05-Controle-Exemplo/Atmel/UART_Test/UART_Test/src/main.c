@@ -42,7 +42,8 @@
 #endif
 
 
-#define AFEC_CHANNEL_RES_PIN 0
+#define AFEC_CHANNEL_RES_PIN 0 //PD30
+#define AFEC_CHANNEL_RES_PIN1 3 //PE5
 
 /** Reference voltage for AFEC,in mv. */
 #define VOLT_REF        (3300)
@@ -102,7 +103,16 @@ volatile long g_systimer = 0;
 volatile bool g_is_conversion_done = false;
 volatile bool g_is_res_done = false;
 volatile bool g_delay = false;
+
+volatile bool g_is_res_done1 = false;
+volatile bool g_is_conversion_done1 = false;
+volatile bool g_delay1 = false;
+
 volatile uint32_t g_res_value = 0;
+volatile uint32_t g_res_value1 = 0;
+
+volatile char analog_x = 'c';
+volatile char analog_y = 'c;'
 
 
 
@@ -130,6 +140,12 @@ static void AFEC_Res_callback(void)
 {
 	g_res_value = afec_channel_get_value(AFEC0, AFEC_CHANNEL_RES_PIN);
 	g_is_res_done = true;
+}
+
+static void AFEC_Res_callback1(void)
+{
+	g_res_value = afec_channel_get_value(AFEC0, AFEC_CHANNEL_RES_PIN1);
+	g_is_res_done1 = true;
 }
 
 
@@ -162,8 +178,8 @@ void TC0_Handler(void){
 	/* Avoid compiler warning */
 	UNUSED(ul_dummy);
 
-	//afec_channel_enable(AFEC0, AFEC_CHANNEL_RES_PIN);
-	//afec_start_software_conversion(AFEC0);
+	afec_channel_enable(AFEC0, AFEC_CHANNEL_RES_PIN1);
+	afec_start_software_conversion(AFEC0);
 	
 }
 
@@ -252,8 +268,11 @@ static void config_ADC_TEMP_RES(void){
 	/* Configura trigger por software */
 	afec_set_trigger(AFEC0, AFEC_TRIG_SW);
 
+
 	/* configura call back */
-	afec_set_callback(AFEC0, AFEC_INTERRUPT_EOC_0,	AFEC_Res_callback, 1);
+	afec_set_callback(AFEC0, AFEC_INTERRUPT_EOC_0, AFEC_Res_callback, 1);
+	afec_set_callback(AFEC0, AFEC_INTERRUPT_EOC_3, AFEC_Res_callback1, 1);
+	
 
 	/*** Configuracao espec�fica do canal AFEC ***/
 	struct afec_ch_config afec_ch_cfg;
@@ -265,6 +284,8 @@ static void config_ADC_TEMP_RES(void){
 	* Because the internal ADC offset is 0x200, it should cancel it and shift
 	 down to 0.
 	 */
+	
+	afec_channel_set_analog_offset(AFEC0, AFEC_CHANNEL_RES_PIN1, 0x200);
 	afec_channel_set_analog_offset(AFEC0, AFEC_CHANNEL_RES_PIN, 0x200);
 
 	/***  Configura sensor de temperatura ***/
@@ -275,8 +296,28 @@ static void config_ADC_TEMP_RES(void){
 
 	/* Selecina canal e inicializa convers�o */
 	afec_channel_enable(AFEC0, AFEC_CHANNEL_RES_PIN);
+	afec_channel_enable(AFEC0, AFEC_CHANNEL_RES_PIN1);
 }
 
+void set_analog_result_x(uint32_t input) {
+	if (input > 3400) {
+		analog_x = 'd';
+	} else if (input < 1100) {
+		analog_x = 'e';
+	} else {
+		analog_x = 'm';
+	}
+}
+
+void set_analog_result_y(uint32_t input) {
+	if (input > 3400) {
+		analog_y = 'c';
+	} else if (input < 1100) {
+		analog_y = 'b';
+	} else {
+		analog_y = 't';
+	}
+}
 
 //funcao que p
 void usart_put_string(Usart *usart, char str[]) {
@@ -475,6 +516,7 @@ int main (void)
 	char button1 = '0';
 	char eof = 'X';
 	char buffer[1024];
+	
 
 	while(1) {
 		if(butA_flag) {
@@ -484,14 +526,22 @@ int main (void)
 			button1 = '0';
 		}
 		if(g_is_res_done==true){
-			printf("done \n");
-
+			set_analog_result(g_res_value);
+			
 			g_is_res_done = false;
+		
+		if(g_is_res_done1 == true) {
+			set_analog_result1(g_res_value1);
+			
+			g_is_res_done1 = false;
 		}
+		
 				
 		//esse while existe pois a velocidade do microprocessador � muito mais rapida do que a do bt. Ele existe para fazer o c�digo esperar o buffer do bt estar pronto.
 		while(!usart_is_tx_ready(UART_COMM));
 		usart_write(UART_COMM, button1);
+		usart_write(UART_COMM, g_res_value);
+		usart_write(UART_COMM, g_res_value1);
 		while(!usart_is_tx_ready(UART_COMM));
 		usart_write(UART_COMM, eof);
 		delay_ms(300);
