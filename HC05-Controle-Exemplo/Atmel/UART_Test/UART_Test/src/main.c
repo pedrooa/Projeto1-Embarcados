@@ -43,7 +43,7 @@
 
 
 #define AFEC_CHANNEL_RES_PIN 0 //PD30
-#define AFEC_CHANNEL_RES_PIN1 3 //PE5
+#define AFEC_CHANNEL_RES_PIN1 8 //PE5
 
 /** Reference voltage for AFEC,in mv. */
 #define VOLT_REF        (3300)
@@ -112,7 +112,7 @@ volatile uint32_t g_res_value = 0;
 volatile uint32_t g_res_value1 = 0;
 
 volatile char analog_x = 'c';
-volatile char analog_y = 'c;'
+volatile char analog_y = 'c';
 
 
 
@@ -144,7 +144,7 @@ static void AFEC_Res_callback(void)
 
 static void AFEC_Res_callback1(void)
 {
-	g_res_value = afec_channel_get_value(AFEC0, AFEC_CHANNEL_RES_PIN1);
+	g_res_value1 = afec_channel_get_value(AFEC0, AFEC_CHANNEL_RES_PIN1);
 	g_is_res_done1 = true;
 }
 
@@ -271,7 +271,7 @@ static void config_ADC_TEMP_RES(void){
 
 	/* configura call back */
 	afec_set_callback(AFEC0, AFEC_INTERRUPT_EOC_0, AFEC_Res_callback, 1);
-	afec_set_callback(AFEC0, AFEC_INTERRUPT_EOC_3, AFEC_Res_callback1, 1);
+	afec_set_callback(AFEC0, AFEC_INTERRUPT_EOC_8, AFEC_Res_callback1, 1);
 	
 
 	/*** Configuracao espec�fica do canal AFEC ***/
@@ -300,22 +300,22 @@ static void config_ADC_TEMP_RES(void){
 }
 
 void set_analog_result_x(uint32_t input) {
-	if (input > 3400) {
-		analog_x = 'd';
+	if (input > 3500) {
+		analog_x = '2';//e
 	} else if (input < 1100) {
-		analog_x = 'e';
+		analog_x = '3';//d
 	} else {
-		analog_x = 'm';
+		analog_x = '0';
 	}
 }
 
 void set_analog_result_y(uint32_t input) {
 	if (input > 3400) {
-		analog_y = 'c';
+		analog_y = '4';//c
 	} else if (input < 1100) {
-		analog_y = 'b';
+		analog_y = '5';//b
 	} else {
-		analog_y = 't';
+		analog_y = '0';
 	}
 }
 
@@ -526,13 +526,13 @@ int main (void)
 			button1 = '0';
 		}
 		if(g_is_res_done==true){
-			set_analog_result(g_res_value);
-			
+			set_analog_result_x(g_res_value);
+			printf("Res : %d \r\n", (g_res_value));
 			g_is_res_done = false;
-		
+		}
 		if(g_is_res_done1 == true) {
-			set_analog_result1(g_res_value1);
-			
+			set_analog_result_y(g_res_value1);
+			printf("Res1 : %d \r\n", (g_res_value1));
 			g_is_res_done1 = false;
 		}
 		
@@ -540,10 +540,13 @@ int main (void)
 		//esse while existe pois a velocidade do microprocessador � muito mais rapida do que a do bt. Ele existe para fazer o c�digo esperar o buffer do bt estar pronto.
 		while(!usart_is_tx_ready(UART_COMM));
 		usart_write(UART_COMM, button1);
+		while(!usart_is_tx_ready(UART_COMM));
 		usart_write(UART_COMM, analog_x);
+		while(!usart_is_tx_ready(UART_COMM));
 		usart_write(UART_COMM, analog_y);
 		while(!usart_is_tx_ready(UART_COMM));
 		usart_write(UART_COMM, eof);
 		delay_ms(300);
 	}
 }
+	
