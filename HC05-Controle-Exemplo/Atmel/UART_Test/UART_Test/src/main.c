@@ -540,8 +540,8 @@ int main (void)
 		//esse while existe pois a velocidade do microprocessador � muito mais rapida do que a do bt. Ele existe para fazer o c�digo esperar o buffer do bt estar pronto.
 		while(!usart_is_tx_ready(UART_COMM));
 		usart_write(UART_COMM, button1);
-		usart_write(UART_COMM, g_res_value);
-		usart_write(UART_COMM, g_res_value1);
+		usart_write(UART_COMM, analog_x);
+		usart_write(UART_COMM, analog_y);
 		while(!usart_is_tx_ready(UART_COMM));
 		usart_write(UART_COMM, eof);
 		delay_ms(300);
