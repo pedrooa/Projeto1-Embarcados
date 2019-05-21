@@ -6,7 +6,8 @@ import pyvjoy # Windows apenas
 
 class MyControllerMap:
     def __init__(self):
-        self.button = {'A': 1, 'Left':2,'Right':3,'Up':5,'Down':4}
+        self.button = {'Start': 1,'A': 2,'B':3}
+        self.joystick = {'Left':4,'Right':5,'Up':6,'Down':7}
         
 
 
@@ -22,43 +23,75 @@ class SerialControllerInterface:
         self.j = pyvjoy.VJoyDevice(1)
         self.incoming = '0'
 
+
+
+
     def update(self):
         ## Sync protocol
         while self.incoming != b'X':
             self.incoming = self.ser.read()
             logging.debug("Received INCOMING: {}".format(self.incoming))
 
+
+
+
+        # for k,v in self.mapping.button.items() :
+	       #  data = self.ser.read()
+	       #  logging.debug("Received DATA: {}".format(data))
+	       #  if data == b'1':
+	       #      logging.info("Sending press")
+	       #      self.j.set_button(v, 1)
+	       #  elif data == b'0':
+	       #      self.j.set_button(v, 0)
+
         data = self.ser.read()
         logging.debug("Received DATA: {}".format(data))
-
         if data == b'1':
             logging.info("Sending press")
-            self.j.set_button(self.mapping.button['A'], 1)
+            self.j.set_button(self.mapping.button['Start'], 1)
         elif data == b'0':
-            self.j.set_button(self.mapping.button['A'], 0)
+            self.j.set_button(self.mapping.button['Start'], 0)
+
+        data = self.ser.read()
+        data = self.ser.read()
+
 
         data = self.ser.read()
         if data == b'2':
             logging.info("Sending press")
-            self.j.set_button(self.mapping.button['Left'], 1)
+            self.j.set_button(self.mapping.joystick['Left'], 1)
         elif data == b'3':
             logging.info("Sending press")
-            self.j.set_button(self.mapping.button['Right'], 1)
+            self.j.set_button(self.mapping.joystick['Right'], 1)
         elif data == b'0':
-            self.j.set_button(self.mapping.button['Right'], 0)
-            self.j.set_button(self.mapping.button['Left'], 0)
+            self.j.set_button(self.mapping.joystick['Right'], 0)
+            self.j.set_button(self.mapping.joystick['Left'], 0)
 
 
         data = self.ser.read()
         if data == b'5':
             logging.info("Sending press")
-            self.j.set_button(self.mapping.button['Up'], 1)
+            self.j.set_button(self.mapping.joystick['Up'], 1)
         elif data == b'4':
             logging.info("Sending press")
-            self.j.set_button(self.mapping.button['Down'], 1)
+            self.j.set_button(self.mapping.joystick['Down'], 1)
         elif data == b'0':
-            self.j.set_button(self.mapping.button['Up'], 0)
-            self.j.set_button(self.mapping.button['Down'], 0)
+            self.j.set_button(self.mapping.joystick['Up'], 0)
+            self.j.set_button(self.mapping.joystick['Down'], 0)
+
+
+        # data = self.ser.read()
+        # self.j.set_axis(pyvjoy.HID_USAGE_X,data);
+
+
+        # data = self.ser.read()
+        # logging.debug("Received DATA: {}".format(data))
+
+        # if data == b'3':
+        #     logging.info("Sending press")
+        #     self.j.set_button(self.mapping.button['B'], 1)
+        # elif data == b'0':
+        #     self.j.set_button(self.mapping.button['B'], 0)
 
 
 

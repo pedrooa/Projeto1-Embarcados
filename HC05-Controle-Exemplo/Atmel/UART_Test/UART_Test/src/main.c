@@ -117,7 +117,7 @@ volatile bool g_delay1 = false;
 volatile uint32_t g_res_value = 0;
 volatile uint32_t g_res_value1 = 0;
 
-volatile char analog_x = 'c';
+volatile char analog_x = 'c' ;
 volatile char analog_y = 'c';
 
 
@@ -210,19 +210,17 @@ void TC1_Handler(void){
 static int32_t convert_adc_to_res(int32_t ADC_value){
 
   int32_t ul_vol;
-  int32_t ul_res;
 
   /*
    * converte bits -> tens�o (Volts)
    */
-	ul_vol = ADC_value * VOLT_REF / (float) MAX_DIGITAL;
+	ul_vol = ADC_value * 32768 / 4095;
 
   /*
    * According to datasheet, The output voltage VT = 0.72V at 27C
    * and the temperature slope dVT/dT = 2.33 mV/C
    */
-  ul_res = (ul_vol - 720)  * 100 / 233 + 27; //MUDAR
-  return(ul_res);
+  return(ul_vol);
 }
 
 void TC_init(Tc * TC, int ID_TC, int TC_CHANNEL, int freq){
@@ -313,6 +311,8 @@ void set_analog_result_x(uint32_t input) {
 	} else {
 		analog_x = '0';
 	}
+	//analog_x = convert_adc_to_res(input);
+	//analog_x = 32768*input/4095;
 }
 
 void set_analog_result_y(uint32_t input) {
@@ -530,7 +530,7 @@ int main (void)
 	hc05_server_init();
 	#endif
 	
-	char button1 = '0';
+	char buttonA = '0';
 	char buttonB = '0';
 	char buttonSelect = '0';
 	char buttonStart = '0';
@@ -540,11 +540,11 @@ int main (void)
 
 	while(1) {
 		if(butA_flag) {
-			button1 = '1';
+			buttonA = '1';
 			pisca_led(LEDA_PIO, LEDA_PIO_IDX_MASK);
 			butA_flag = false;
 		} else {
-			button1 = '0';
+			buttonA = '0';
 			
 		if(butB_flag){
 			buttonB = '1';
@@ -571,7 +571,7 @@ int main (void)
 		}
 		if(g_is_res_done==true){
 			set_analog_result_x(g_res_value);
-			printf("Res : %d \r\n", (g_res_value));
+			printf("Res : %d \r\n", (analog_x));
 			g_is_res_done = false;
 		}
 		if(g_is_res_done1 == true) {
@@ -583,17 +583,15 @@ int main (void)
 				
 		//esse while existe pois a velocidade do microprocessador � muito mais rapida do que a do bt. Ele existe para fazer o c�digo esperar o buffer do bt estar pronto.
 		while(!usart_is_tx_ready(UART_COMM));
-		usart_write(UART_COMM, button1);
+		usart_write(UART_COMM, buttonStart);
+		while(!usart_is_tx_ready(UART_COMM));
+		usart_write(UART_COMM, buttonA);
+		while(!usart_is_tx_ready(UART_COMM));
+		usart_write(UART_COMM, buttonB);
 		while(!usart_is_tx_ready(UART_COMM));
 		usart_write(UART_COMM, analog_x);
 		while(!usart_is_tx_ready(UART_COMM));
 		usart_write(UART_COMM, analog_y);
-		while(!usart_is_tx_ready(UART_COMM));
-		usart_write(UART_COMM, buttonB);
-		while(!usart_is_tx_ready(UART_COMM));
-		usart_write(UART_COMM, buttonSelect);
-		while(!usart_is_tx_ready(UART_COMM));
-		usart_write(UART_COMM, buttonStart);
 		while(!usart_is_tx_ready(UART_COMM));
 		usart_write(UART_COMM, eof);
 		//delay_ms(300);
