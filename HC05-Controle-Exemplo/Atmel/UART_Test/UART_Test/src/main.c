@@ -81,6 +81,21 @@
 #define LEDA_PIO_IDX 2u
 #define LEDA_PIO_IDX_MASK (1u << LEDA_PIO_IDX)
 
+#define LEDB_PIO PIOB
+#define LEDB_PIO_ID ID_PIOB
+#define LEDB_PIO_IDX 3u
+#define LEDB_PIO_IDX_MASK (1u << LEDB_PIO_IDX)
+
+#define LEDSELECT_PIO PIOC
+#define LEDSELECT_PIO_ID ID_PIOC
+#define LEDSELECT_PIO_IDX 30u
+#define LEDSELECT_PIO_IDX_MASK (1u << LEDSELECT_PIO_IDX)
+
+#define LEDSTART_PIO PIOC
+#define LEDSTART_PIO_ID ID_PIOC
+#define LEDSTART_PIO_IDX 17u
+#define LEDSTART_PIO_IDX_MASK (1u << LEDSTART_PIO_IDX)
+
 
 /** UART Interface */
 #define CONF_UART            CONSOLE_UART
@@ -388,7 +403,7 @@ int hc05_server_init(void) {
 
 void pisca_led(LED_PIO, LED_IDX_MASK){
 	pio_set(LED_PIO, LED_IDX_MASK);
-	delay_ms(100);
+	delay_ms(50);
 	pio_clear(LED_PIO, LED_IDX_MASK);
 }
 
@@ -548,6 +563,7 @@ int main (void)
 			
 		if(butB_flag){
 			buttonB = '1';
+			pisca_led(LEDB_PIO, LEDB_PIO_IDX_MASK);
 			butB_flag = false;
 		}
 		else{
@@ -555,6 +571,7 @@ int main (void)
 		}
 		if(butSelect_flag){
 			buttonSelect = '1';
+			pisca_led(LEDSELECT_PIO, LEDSELECT_PIO_IDX_MASK);
 			butSelect_flag = false;
 		}
 		else{
@@ -562,6 +579,7 @@ int main (void)
 		}
 		if(butStart_flag){
 			buttonStart = '1';
+			pisca_led(LEDSTART_PIO, LEDSTART_PIO_IDX_MASK);
 			butStart_flag = false;
 		}
 		else {
