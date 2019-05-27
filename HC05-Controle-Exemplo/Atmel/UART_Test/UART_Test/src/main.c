@@ -112,7 +112,7 @@
 
 /************************************************************************/
 /* variaveis globais                                                    */
-/************************************************************************/
+/**********************************************ta**************************/
 volatile bool butA_flag = false;
 volatile bool butB_flag = false;
 volatile bool butSelect_flag = false;
@@ -132,8 +132,8 @@ volatile bool g_delay1 = false;
 volatile uint32_t g_res_value = 0;
 volatile uint32_t g_res_value1 = 0;
 
-volatile char analog_x = 'c' ;
-volatile char analog_y = 'c';
+volatile char[80] analog_x;
+volatile char[80] analog_y;
 
 
 
@@ -326,25 +326,14 @@ static void config_ADC_TEMP_RES(void){
 }
 
 void set_analog_result_x(uint32_t input) {
-	if (input > 3500) {
-		analog_x = '3';//d
-	} else if (input < 1100) {
-		analog_x = '2';//e
-	} else {
-		analog_x = '0';
+	sprintf(analog_x, ";%d;", input);
 	}
 	//analog_x = convert_adc_to_res(input);
 	//analog_x = 32768*input/4095;
 }
 
 void set_analog_result_y(uint32_t input) {
-	if (input > 3400) {
-		analog_y = '4';//b
-	} else if (input < 1100) {
-		analog_y = '5';//c
-	} else {
-		analog_y = '0';
-	}
+	sprintf(analog_y, ";%d;", input);
 }
 
 //funcao que p
