@@ -43,7 +43,7 @@
 
 
 #define AFEC_CHANNEL_RES_PIN 0 //PD30
-#define AFEC_CHANNEL_RES_PIN1 8 //PE5
+#define AFEC_CHANNEL_RES_PIN1 8 //PA19
 
 /** Reference voltage for AFEC,in mv. */
 #define VOLT_REF        (3300)
@@ -139,21 +139,28 @@ volatile char analog_y = 'c';
 
 void butA_callback(void)
 {
+	printf("A\n");
   butA_flag = true;
 }
 
 void butB_callback(void)
 {
+		printf("B\n");
+
   butB_flag = true;
 }
 
 void butSelect_callback(void)
 {
+			printf("Select\n");
+
   butSelect_flag = true;
 }
 
 void butStart_callback(void)
 {
+				printf("Start\n");
+
   butStart_flag = true;
 }
 
@@ -391,17 +398,22 @@ void hc05_config_server(void) {
 }
 
 int hc05_server_init(void) {
-	char buffer_rx[128];
-	usart_send_command(USART0, buffer_rx, 1000, "AT", 1000);
-	usart_send_command(USART0, buffer_rx, 1000, "AT", 1000);	
-	usart_send_command(USART0, buffer_rx, 1000, "AT+NAMEPedro", 1000);
-	usart_log("hc05_server_init", buffer_rx);
-	usart_send_command(USART0, buffer_rx, 1000, "AT", 1000);
-	usart_send_command(USART0, buffer_rx, 1000, "AT+PIN5555", 1000);
-	usart_log("hc05_server_init", buffer_rx);
+char buffer_rx[128];
+usart_send_command(USART0, buffer_rx, 1000, "AT", 1000);
+usart_send_command(USART0, buffer_rx, 1000, "AT", 1000);
+usart_send_command(USART0, buffer_rx, 1000, "AT+NAMEPedro", 1000);
+usart_log("hc05_server_init", buffer_rx);
+usart_send_command(USART0, buffer_rx, 1000, "AT", 1000);
+usart_send_command(USART0, buffer_rx, 1000, "AT+PIN5555", 1000);
+usart_log("hc05_server_init", buffer_rx);
+
+/*
+usart_send_command(USART0, buffer_rx, 1000, "AT", 1000);
+usart_send_command(USART0, buffer_rx, 1000, "AT+RESET", 1000);
+usart_log("hc05_server_init", buffer_rx);*/
 }
 
-void pisca_led(LED_PIO, LED_IDX_MASK){
+void pisca_led(uint LED_PIO, uint LED_IDX_MASK){
 	pio_set(LED_PIO, LED_IDX_MASK);
 	delay_ms(50);
 	pio_clear(LED_PIO, LED_IDX_MASK);
@@ -419,7 +431,8 @@ void init(void)
 
   // Configura PIO para lidar com o pino do botão como entrada
   // com pull-up
-	pio_configure(BUTA_PIO, PIO_INPUT, BUTA_PIO_IDX_MASK, PIO_PULLUP);
+	pio_configure(BUTA_PIO, PIO_INPUT, BUTA_PIO_IDX_MASK, PIO_PULLUP | PIO_DEBOUNCE);
+	//pio_set_debounce_filter(BUTA_PIO,BUTA_PIO_IDX_MASK,200);
 
   // Configura interrupção no pino referente ao botao e associa
   // função de callback caso uma interrupção for gerada
@@ -520,23 +533,53 @@ void init(void)
   
   pmc_enable_periph_clk(LEDA_PIO_ID);
   pio_configure(LEDA_PIO, PIO_OUTPUT_0, LEDA_PIO_IDX_MASK, PIO_DEFAULT);
+  
+  pmc_enable_periph_clk(LEDB_PIO_ID);
+  pio_configure(LEDB_PIO, PIO_OUTPUT_0, LEDB_PIO_IDX_MASK, PIO_DEFAULT);
+  
+  pmc_enable_periph_clk(LEDSTART_PIO_ID);
+  pio_configure(LEDSTART_PIO, PIO_OUTPUT_0, LEDSTART_PIO_IDX_MASK, PIO_DEFAULT);
+  
+  pmc_enable_periph_clk(LEDSELECT_PIO);
+  pio_configure(LEDSELECT_PIO_ID, PIO_OUTPUT_0, LEDSELECT_PIO_IDX_MASK, PIO_DEFAULT);
 	
 }
 
+void send_command(char buttonStart, char buttonA, char buttonB, char analog_x, char analog_y, char eof ){
+			while(!usart_is_tx_ready(UART_COMM));
+			usart_write(UART_COMM, buttonStart);
+			while(!usart_is_tx_ready(UART_COMM));
+			usart_write(UART_COMM, buttonA);
+			while(!usart_is_tx_ready(UART_COMM));
+			usart_write(UART_COMM, buttonB);
+			while(!usart_is_tx_ready(UART_COMM));
+			usart_write(UART_COMM, analog_x);
+			while(!usart_is_tx_ready(UART_COMM));
+			usart_write(UART_COMM, analog_y);
+			while(!usart_is_tx_ready(UART_COMM));
+			usart_write(UART_COMM, eof);
+}
 
 int main (void)
 {
 	board_init();
-	sysclk_init();
+	sysclk_init(); 
 	delay_init();
 	SysTick_Config(sysclk_get_cpu_hz() / 1000); // 1 ms
 	config_ADC_TEMP_RES();
 	configure_console();
 	init();
 	
-	TC_init(TC0, ID_TC1, 1, 1);
-	TC_init(TC0, ID_TC0, 0, 10);
-		
+	
+	TC_init(TC0, ID_TC1, 1, 7);
+	TC_init(TC0, ID_TC0, 0, 5);
+	
+/*
+		usart_put_string(USART1, "Inicializando...\r\n");
+		usart_put_string(USART1, "Config HC05 Server...\r\n");
+		hc05_config_server();
+		hc05_server_init();
+		*/
 	
 	#ifndef DEBUG_SERIAL
 	usart_put_string(USART1, "Inicializando...\r\n");
@@ -557,62 +600,83 @@ int main (void)
 		if(butA_flag) {
 			buttonA = '1';
 			pisca_led(LEDA_PIO, LEDA_PIO_IDX_MASK);
-			butA_flag = false;
+			//butA_flag = false;
 		} else {
 			buttonA = '0';
-			
+		}
+		
 		if(butB_flag){
 			buttonB = '1';
 			pisca_led(LEDB_PIO, LEDB_PIO_IDX_MASK);
-			butB_flag = false;
+			//butB_flag = false;
 		}
 		else{
 			buttonB = '0';
 		}
+		
 		if(butSelect_flag){
 			buttonSelect = '1';
 			pisca_led(LEDSELECT_PIO, LEDSELECT_PIO_IDX_MASK);
-			butSelect_flag = false;
+			//butSelect_flag = false;
+			
 		}
 		else{
 			buttonSelect = '0';
 		}
+		
 		if(butStart_flag){
 			buttonStart = '1';
 			pisca_led(LEDSTART_PIO, LEDSTART_PIO_IDX_MASK);
-			butStart_flag = false;
+			//butStart_flag = false;
 		}
 		else {
 			buttonStart = '0';
 		}
 		
-		}
 		if(g_is_res_done==true){
 			set_analog_result_x(g_res_value);
-			printf("Res : %d \r\n", (analog_x));
-			g_is_res_done = false;
+			printf("Res : %d \r\n", (g_res_value));
+			//g_is_res_done = false;
+			
 		}
+		
 		if(g_is_res_done1 == true) {
 			set_analog_result_y(g_res_value1);
 			printf("Res1 : %d \r\n", (g_res_value1));
-			g_is_res_done1 = false;
+					//	g_is_res_done1 = false;
+
 		}
+
+/*
+					while(!usart_is_tx_ready(UART_COMM));
+					usart_write(UART_COMM, buttonStart);
+					while(!usart_is_tx_ready(UART_COMM));
+					usart_write(UART_COMM, buttonA);
+					while(!usart_is_tx_ready(UART_COMM));
+					usart_write(UART_COMM, buttonB);
+					while(!usart_is_tx_ready(UART_COMM));
+					usart_write(UART_COMM, analog_x);
+					while(!usart_is_tx_ready(UART_COMM));
+					usart_write(UART_COMM, analog_y);
+					while(!usart_is_tx_ready(UART_COMM));
+					usart_write(UART_COMM, eof);
+					delay_ms(1); || g_is_res_done || g_is_res_done1*/
 		
-				
+		if( butA_flag || butB_flag || butSelect_flag || butStart_flag || g_is_res_done || g_is_res_done1 ) {
 		//esse while existe pois a velocidade do microprocessador � muito mais rapida do que a do bt. Ele existe para fazer o c�digo esperar o buffer do bt estar pronto.
-		while(!usart_is_tx_ready(UART_COMM));
-		usart_write(UART_COMM, buttonStart);
-		while(!usart_is_tx_ready(UART_COMM));
-		usart_write(UART_COMM, buttonA);
-		while(!usart_is_tx_ready(UART_COMM));
-		usart_write(UART_COMM, buttonB);
-		while(!usart_is_tx_ready(UART_COMM));
-		usart_write(UART_COMM, analog_x);
-		while(!usart_is_tx_ready(UART_COMM));
-		usart_write(UART_COMM, analog_y);
-		while(!usart_is_tx_ready(UART_COMM));
-		usart_write(UART_COMM, eof);
-		//delay_ms(300);
+			butA_flag = false;
+			butB_flag = false;
+			butSelect_flag = false;
+			butStart_flag = false;
+			g_is_res_done = false;
+			g_is_res_done1 = false;
+			send_command(buttonStart,buttonA,buttonB,analog_x,analog_y,eof );
+			delay_ms(10);
+			
+			send_command(0,0,0,analog_x,analog_y,eof);
+			
+
+		}
 	}
 }
 	
